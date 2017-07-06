@@ -1,6 +1,6 @@
 <?php
-$_SERVER["DOCUMENT_ROOT"] = realpath(dirname(__FILE__) . "/..");
-$DOCUMENT_ROOT = $_SERVER["DOCUMENT_ROOT"];
+// $_SERVER["DOCUMENT_ROOT"] = realpath(dirname(__FILE__) . "/..");
+// $DOCUMENT_ROOT = $_SERVER["DOCUMENT_ROOT"];
 
 define("NO_KEEP_STATISTIC", true);
 define("NOT_CHECK_PERMISSIONS", true);
@@ -23,13 +23,13 @@ if (!CModule::IncludeModule("search")) {
 //$file = $_SERVER['DOCUMENT_ROOT'] . '/local/import-yml/yml/marketYandex.yml';  // импортируемый файл
 $file = $_SERVER['DOCUMENT_ROOT'] . '/local/import-yml/yml/example.yml';  // импортируемый файл
 
+echo '<pre>';
+
 Bitrix\Main\Diag\Debug::startTimeLabel("run");
 
 $instance = ImportYmlFile::getInstance();
 
 if ($xmlObj = $instance->getXmlToObject($file)) {
-
-    echo '<pre>';
 
 //    $instance->workWithImages($xmlObj);   // перемещение скаченных файлов в соответствующие каталоги
 
@@ -45,19 +45,16 @@ if ($xmlObj = $instance->getXmlToObject($file)) {
         CSearch::ReIndexModule('iblock');
     }
 
-    echo '</pre>';
-
     Bitrix\Main\Diag\Debug::endTimeLabel("run");
 
-    echo '<pre>';
     echo 'Added catalogs = ' . count($arCatalogs);
     echo '<br>';
-//    echo 'Added items = ' . count($arItems);
-    echo 'Added items = ' . $items;
+    echo 'Added items = ' . ($items ?: 0);
     echo '<br>';
-    var_dump(Bitrix\Main\Diag\Debug::getTimeLabels()['run']['time']);
-    echo '</pre>';
 }
+var_dump(Bitrix\Main\Diag\Debug::getTimeLabels()['run']['time']);
+
+echo '</pre>';
 
 
 class ImportYmlFile {
@@ -118,6 +115,11 @@ class ImportYmlFile {
         while ($arItem = $res->Fetch()) {
             $this->itemsCurrent[$arItem['PROPERTY_YAML_ID_VALUE']] = $arItem;
         }
+        /*
+                if ($res = $this->getRelation()) {
+                    $this->relationArray = $res;
+                }
+        */
     }
 
     public static function getInstance() {
@@ -293,7 +295,6 @@ class ImportYmlFile {
     }
 
     public function addItemToCatalog($item) {
-
         $addItem = true;
         $arLoadProductArray = Array(
             "IBLOCK_SECTION_ID" => $item['relatedParentId'],
@@ -543,5 +544,37 @@ class ImportYmlFile {
 //        var_dump($image);
 
         return $image ?: false;
+    }
+
+    public function getRelation() {
+        $arItems = [];
+        $hlBlockId = 1;
+
+        if (CModule::IncludeModule('highloadblock')) {
+            $arHLBlock = Bitrix\Highloadblock\HighloadBlockTable::getById($hlBlockId)->fetch();
+            $obEntity = Bitrix\Highloadblock\HighloadBlockTable::compileEntity($arHLBlock);
+            $strEntityDataClass = $obEntity->getDataClass();
+
+            echo '<pre>';
+//            var_dump($arHLBlock);
+//            var_dump($obEntity);
+//            var_dump($strEntityDataClass);
+
+            $rsData = $strEntityDataClass::getList([
+                'select' => ['UF_YAML_CATALOG_ID', 'UF_YAML_CATALOG_NAME', 'UF_BX_CATALOG_ID', 'UF_CATALOG'],
+                'order'  => ['UF_BX_CATALOG_ID' => 'ASC'],
+                'filter' => ['UF_ACTIVE' => '1'],
+            ]);
+            while ($arItem = $rsData->Fetch()) {
+                $arItems[$arItem['UF_YAML_CATALOG_ID']] = $arItem['UF_BX_CATALOG_ID'];
+//                $arItems[$arItem['UF_YAML_CATALOG_ID']] = $arItem;
+            }
+
+//            var_dump($arItems);
+
+            echo '</pre>';
+        }
+
+        return $arItems;
     }
 }
