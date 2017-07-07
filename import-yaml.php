@@ -1,6 +1,6 @@
 <?php
-// $_SERVER["DOCUMENT_ROOT"] = realpath(dirname(__FILE__) . "/..");
-// $DOCUMENT_ROOT = $_SERVER["DOCUMENT_ROOT"];
+$_SERVER["DOCUMENT_ROOT"] = realpath(dirname(__FILE__) . "/../..");
+$DOCUMENT_ROOT = $_SERVER["DOCUMENT_ROOT"];
 
 define("NO_KEEP_STATISTIC", true);
 define("NOT_CHECK_PERMISSIONS", true);
@@ -8,6 +8,7 @@ define('CHK_EVENT', true);
 
 @set_time_limit(0);
 @ignore_user_abort(true);
+
 
 require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_before.php");
 
@@ -31,27 +32,24 @@ $instance = ImportYmlFile::getInstance();
 
 if ($xmlObj = $instance->getXmlToObject($file)) {
 
+    $arCatalogs = $instance->importCatalogs($xmlObj);
+
+    $items = $instance->importItems($xmlObj, $arCatalogs);
+
+
 //    $instance->workWithImages($xmlObj);   // перемещение скаченных файлов в соответствующие каталоги
 
 //    $instance->getPicUrl($xmlObj);     // save to txt-file image url from yaml-file
 
 //    $instance->showListCatalog($xmlObj);
 
-    $arCatalogs = $instance->importCatalogs($xmlObj);
-
-    $items = $instance->importItems($xmlObj, $arCatalogs);
-
-    if ($items > 0) {
-        CSearch::ReIndexModule('iblock');
-    }
-
-    Bitrix\Main\Diag\Debug::endTimeLabel("run");
-
     echo 'Added catalogs = ' . count($arCatalogs);
     echo '<br>';
     echo 'Added items = ' . ($items ?: 0);
     echo '<br>';
 }
+Bitrix\Main\Diag\Debug::endTimeLabel("run");
+
 var_dump(Bitrix\Main\Diag\Debug::getTimeLabels()['run']['time']);
 
 echo '</pre>';
@@ -61,15 +59,13 @@ class ImportYmlFile {
     private static $_instance;
 
     const CATALOG_ID = '4';  // id инфоблока каталога (куда импортируем)
-    const SITE_ID = SITE_ID; // магазин
+//    const SITE_ID = SITE_ID; // магазин
 
     const PARTNER_PRODUCT_SELECTED_ID = '13'; // id свойства Товар партнера (PARTNER_PRODUCT)
 
     const PARENT_REPAIR_ID = 'repair';                  // значение доп. поля раздела Для ремонта (UF_YAML_ID)
     const PARENT_FURNITURE_ID = 'furniture';            // значение доп. поля раздела Мебель (UF_YAML_ID)
     const PARENT_DACHA_ID = 'tovary-dlya-doma-i-dachi'; // значение доп. поля раздела Дом и дача (UF_YAML_ID)
-
-    private $itemsCurrent = null;   // существующие yaml товары
 
     public $relationArray = [      // yml_id раздела (что добавлять) => bx_id раздела (куда добавлять)
         '141' => self::PARENT_DACHA_ID,      // Садовая техника
@@ -92,10 +88,10 @@ class ImportYmlFile {
         // '1767' => self::PARENT_REPAIR_ID,     // Строительное оборудование (И все подкатегории)
     ];
 
-    public $updatePic = false;  // true   - обновлять или нет картинки
-    // $updatePic = true  на 100 товарах : add/update - 233сек.
-    // $updatePic = false на 100 товарах :     update - 55сек.
+    public $updatePic = false;      // true   - обновлять или нет картинки
+    public $bUpdateSearch = false;  // Индексировать элемент для поиска
 
+    private $itemsCurrent = null;   // существующие yaml товары
     private $file;
 
     public $from = '/upload/21vek/';        // откуда брать картинки
@@ -104,7 +100,6 @@ class ImportYmlFile {
     private function __construct() {
         // get yaml items from BX
         $this->itemsCurrent = [];
-
         $arSelect = ['ID', 'NAME', 'IBLOCK_SECTION_ID', 'PROPERTY_YAML_ID'];
         $arFilter = [
             "IBLOCK_ID"         => self::CATALOG_ID,
@@ -246,7 +241,7 @@ class ImportYmlFile {
 
         $arFilter = ["IBLOCK_ID"   => self::CATALOG_ID,
                      'ACTIVE'      => 'Y',
-                     'SITE_ID'     => self::SITE_ID,
+//                     'SITE_ID'     => self::SITE_ID,
                      "=UF_YAML_ID" => $uf_yaml_id,
                      'TYPE'        => 'catalog',
         ];
@@ -290,12 +285,15 @@ class ImportYmlFile {
             if ($addedItemsCount > 99) break;
         }
 
+        if ($this->bUpdateSearch && $addedItemsCount > 0) {
+            CSearch::ReIndexModule('iblock');
+        }
+
 //        return $items;
         return $addedItemsCount;
     }
 
     public function addItemToCatalog($item) {
-        $addItem = true;
         $arLoadProductArray = Array(
             "IBLOCK_SECTION_ID" => $item['relatedParentId'],
             "IBLOCK_ID"         => self::CATALOG_ID,
@@ -308,46 +306,37 @@ class ImportYmlFile {
 //            "PREVIEW_PICTURE"   => $this->getImg($item['picture'][0]),
         );
 
+        $prop = [
+            'ABOUT_BRAND'     => $item['country_of_origin'],
+            'YAML_ID'         => $item['id'],
+            "PARTNER_PRODUCT" => self::PARTNER_PRODUCT_SELECTED_ID
+        ];
+
         $el = new CIBlockElement;
 
         $PRODUCT_ID = $this->existItem($item);   // get Bx item Id
+
+        if (!$PRODUCT_ID || $this->updatePic) {
+            $arPictures = array_map([$this, 'getImg'], $item['picture']);
+            $arLoadProductArray["PREVIEW_PICTURE"] = $arPictures[0];
+            $prop['PHOTO'] = $arPictures;
+        }
         if (!$PRODUCT_ID) {
-//            $arLoadProductArray["PREVIEW_PICTURE"] = CFile::MakeFileArray($item['picture'][0]);
-            $arLoadProductArray["PREVIEW_PICTURE"] = $this->getImg($item['picture'][0]);
-            if ($PRODUCT_ID = $el->Add($arLoadProductArray, false, false)) {
+            if ($PRODUCT_ID = $el->Add($arLoadProductArray, false, $this->bUpdateSearch)) {
 //                echo "Added: " . $PRODUCT_ID;
             } else
                 echo "Error added : " . $el->LAST_ERROR;
         } else {
-            if ($this->updatePic) {
-//                $arLoadProductArray["PREVIEW_PICTURE"] = CFile::MakeFileArray($item['picture'][0]);
-                $arLoadProductArray["PREVIEW_PICTURE"] = $this->getImg($item['picture'][0]);
-            }
-            if ($el->Update($PRODUCT_ID, $arLoadProductArray, false, false)) {
-                $addItem = false;
+            if ($el->Update($PRODUCT_ID, $arLoadProductArray, false, $this->bUpdateSearch)) {
 //                echo "Update: " . $PRODUCT_ID;
             } else {
                 echo "Error update: " . $el->LAST_ERROR;
             }
         }
 
-        $prop = [
-            'ABOUT_BRAND'     => $item['country_of_origin'],
-            'YAML_ID'         => $item['id'],
-            "PARTNER_PRODUCT" => self::PARTNER_PRODUCT_SELECTED_ID
-        ];
-        if ($addItem || $this->updatePic) {
-//            echo 'Add photo';
-//            $prop['PHOTO'] = array_map([$this, 'getPhoto'], $item['picture']);
-            $prop['PHOTO'] = array_map([$this, 'getImg'], $item['picture']);
-        } else {
-//            echo 'Update';
-        }
-
         $this->setItemProperties($PRODUCT_ID, $prop);
 
         $arFields = array("ID" => $PRODUCT_ID, 'QUANTITY' => '1');
-
         if (CCatalogProduct::Add($arFields)) {
 //        echo "Добавили параметры товара к элементу каталога " . $PRODUCT_ID . '<br>';
             $this->setItemPrice($PRODUCT_ID, $item);
@@ -521,12 +510,12 @@ class ImportYmlFile {
 
     public function workWithImages($xmlObj) {
         $arYamlImg = $this->getYamlImg($xmlObj);   // get name & directory img-file from yaml-file
-
         $from = $_SERVER['DOCUMENT_ROOT'] . $this->from;
         $arUploadImg = $this->getUploadImg($from);    // get upload files
-        //        var_dump($arUploadImg);
-
         foreach ($arUploadImg as $img) {
+            if (!$arYamlImg[$img]) {
+                continue;
+            }
             $to = $_SERVER['DOCUMENT_ROOT'] . $this->to . $arYamlImg[$img];
             $this->moveImage($img, $from, $to);
         }
@@ -539,9 +528,7 @@ class ImportYmlFile {
 
         $file = $_SERVER['DOCUMENT_ROOT'] . $this->to . $dir . $fileName;
 
-        $image = (file_exists($file) && true ? CFile::MakeFileArray($file) : $image = CFile::MakeFileArray($img));
-
-//        var_dump($image);
+        $image = (file_exists($file) && true ? CFile::MakeFileArray($file) : CFile::MakeFileArray($img));
 
         return $image ?: false;
     }
