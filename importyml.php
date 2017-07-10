@@ -28,15 +28,14 @@ echo '<pre>';
 
 Bitrix\Main\Diag\Debug::startTimeLabel("run");
 
-$instance = ImportYmlFile::getInstance();
+$instance = ImportYml::getInstance();
 if ($xmlObj = $instance->getXmlToObject($file)) {
 
     $arCatalogs = $instance->importCatalogs($xmlObj);
     $items = $instance->importItems($xmlObj, $arCatalogs);
 
 //    $from = realpath(dirname(__FILE__) . "/../../../../..") . "/domatv_image/";
-//    $to = '/upload/img/galleries/';
-//    $instance->workWithImages($xmlObj, $from, $to);   // перемещение скаченных файлов в соответствующие каталоги
+//    $instance->workWithImages($xmlObj, $from);   // перемещение скаченных файлов в соответствующие каталоги
 
 //    $instance->getPicUrl($xmlObj);     // save to txt-file image url from yaml-file
 //    $instance->showListCatalog($xmlObj);
@@ -53,7 +52,7 @@ var_dump(Bitrix\Main\Diag\Debug::getTimeLabels()['run']['time']);
 echo '</pre>';
 
 
-class ImportYmlFile {
+class ImportYml {
     private static $_instance;
 
     const CATALOG_ID = '4';  // id инфоблока каталога (куда импортируем)
@@ -64,24 +63,24 @@ class ImportYmlFile {
     const PARENT_DACHA_ID = 'tovary-dlya-doma-i-dachi'; // значение доп. поля раздела Дом и дача (UF_YAML_ID)
 
     public $relationArray = [      // yml_id раздела (что добавлять) => bx_id раздела (куда добавлять)
-        '141'  => self::PARENT_DACHA_ID,      // Садовая техника
-        '270'  => self::PARENT_DACHA_ID,      // Оборудование
-        '139'  => self::PARENT_DACHA_ID,      // Для отдыха
-        '1677' => self::PARENT_FURNITURE_ID,  // Мебель   ( Для жилых комнат )
-        '344'  => self::PARENT_FURNITURE_ID,  // Интерьер
-        '1607' => self::PARENT_FURNITURE_ID,  // Для ванной
-        '1937' => self::PARENT_FURNITURE_ID,  // Мебель для прихожей
-        '2017' => self::PARENT_FURNITURE_ID,  // Мебель для спальни
-        '2047' => self::PARENT_FURNITURE_ID,  // Мягкая мебель
-        '285'  => self::PARENT_FURNITURE_ID,  // Детская мебель
-        '346'  => self::PARENT_REPAIR_ID,     // Сантехника (И все подкатегории)
-        '1747' => self::PARENT_REPAIR_ID,     // Двери и конструкции для дома (И все подкатегории)
-        '905'  => self::PARENT_REPAIR_ID,     // Отделочные материалы (И все подкатегории)
-        '544'  => self::PARENT_REPAIR_ID,     // Электроинструмент (И все подкатегории)
-        '633'  => self::PARENT_REPAIR_ID,     // Профессиональный инструмент (И все подкатегории)
-        '138'  => self::PARENT_REPAIR_ID,     // Ручной инструмент, оборудование (И все подкатегории)
-        '1807' => self::PARENT_REPAIR_ID,     // Отопление, водоснабжение, вентиляция (И все подкатегории)
-        '1767' => self::PARENT_REPAIR_ID,     // Строительное оборудование (И все подкатегории)
+        '141' => self::PARENT_DACHA_ID,      // Садовая техника
+        '270' => self::PARENT_DACHA_ID,      // Оборудование
+        '139' => self::PARENT_DACHA_ID,      // Для отдыха
+//        '1677' => self::PARENT_FURNITURE_ID,  // Мебель   ( Для жилых комнат )
+//        '344'  => self::PARENT_FURNITURE_ID,  // Интерьер
+//        '1607' => self::PARENT_FURNITURE_ID,  // Для ванной
+//        '1937' => self::PARENT_FURNITURE_ID,  // Мебель для прихожей
+//        '2017' => self::PARENT_FURNITURE_ID,  // Мебель для спальни
+//        '2047' => self::PARENT_FURNITURE_ID,  // Мягкая мебель
+//        '285'  => self::PARENT_FURNITURE_ID,  // Детская мебель
+//        '346'  => self::PARENT_REPAIR_ID,     // Сантехника (И все подкатегории)
+//        '1747' => self::PARENT_REPAIR_ID,     // Двери и конструкции для дома (И все подкатегории)
+//        '905'  => self::PARENT_REPAIR_ID,     // Отделочные материалы (И все подкатегории)
+//        '544'  => self::PARENT_REPAIR_ID,     // Электроинструмент (И все подкатегории)
+//        '633'  => self::PARENT_REPAIR_ID,     // Профессиональный инструмент (И все подкатегории)
+//        '138'  => self::PARENT_REPAIR_ID,     // Ручной инструмент, оборудование (И все подкатегории)
+//        '1807' => self::PARENT_REPAIR_ID,     // Отопление, водоснабжение, вентиляция (И все подкатегории)
+//        '1767' => self::PARENT_REPAIR_ID,     // Строительное оборудование (И все подкатегории)
     ];
 
     public $updatePic = false;      // true   - обновлять или нет картинки
@@ -136,7 +135,7 @@ class ImportYmlFile {
 
     public function importCatalogs($xmlObj) {
         $arParents = array_keys($this->relationArray);
-//        $arCategories = [];
+        $arCategories = [];
         foreach ($xmlObj->shop->categories->category as $category) {
             if (in_array($category['id'], $arParents) && empty($category['parentId'])) {
                 $parentId = $this->getBxParentId((string)$category['id']);
@@ -147,9 +146,10 @@ class ImportYmlFile {
                     'name'            => $category['id'] == 1677 ? 'Для жилых комнат' : trim($category[0]),
                 ];
 
-//                $arCategories[(string)$category['id']] = $item;
-
-                $this->addSubCatalog($item);   // add sub-catalog
+                if ($this->addSubCatalog($item)) {  // add sub-catalog
+//                    $arCategories[(string)$category['id']] = $item;
+                    $arCategories[] = (int)$category['id'];
+                }
 
             } elseif (in_array($category['parentId'], $arParents)) {
                 if (!in_array($category['id'], $arParents)) {
@@ -162,14 +162,16 @@ class ImportYmlFile {
                         'name'            => trim($category[0]),
                     ];
 
-//                    $arCategories[$item['id']] = $item;
-
-                    $this->addCatalog($item);
+                    if ($this->addCatalog($item)) {
+//                        $arCategories[$item['id']] = $item;
+                        $arCategories[] = (int)$category['id'];
+                    }
                 }
             }
         }
 
-        return $arParents;
+        return $arCategories;
+//        return $arParents;
     }
 
     public function getBxParentId($id) {
