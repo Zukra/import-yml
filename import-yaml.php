@@ -1,6 +1,6 @@
 <?php
 $_SERVER["DOCUMENT_ROOT"] = realpath(dirname(__FILE__) . "/../..");
-$DOCUMENT_ROOT = $_SERVER["DOCUMENT_ROOT"];
+// $DOCUMENT_ROOT = $_SERVER["DOCUMENT_ROOT"];
 
 define("NO_KEEP_STATISTIC", true);
 define("NOT_CHECK_PERMISSIONS", true);
@@ -21,26 +21,24 @@ if (!CModule::IncludeModule("search")) {
     return;
 }
 
-//$file = $_SERVER['DOCUMENT_ROOT'] . '/local/import-yml/yml/marketYandex.yml';  // импортируемый файл
-$file = $_SERVER['DOCUMENT_ROOT'] . '/local/import-yml/yml/example.yml';  // импортируемый файл
+$file = $_SERVER['DOCUMENT_ROOT'] . '/local/import-yml/yml/marketYandex.yml';  // импортируемый файл
+// $file = $_SERVER['DOCUMENT_ROOT'] . '/local/import-yml/yml/example.yml';  // импортируемый файл
 
 echo '<pre>';
 
 Bitrix\Main\Diag\Debug::startTimeLabel("run");
 
 $instance = ImportYmlFile::getInstance();
-
 if ($xmlObj = $instance->getXmlToObject($file)) {
 
     $arCatalogs = $instance->importCatalogs($xmlObj);
-
     $items = $instance->importItems($xmlObj, $arCatalogs);
 
-
-//    $instance->workWithImages($xmlObj);   // перемещение скаченных файлов в соответствующие каталоги
+//    $from = realpath(dirname(__FILE__) . "/../../../../..") . "/domatv_image/";
+//    $to = '/upload/img/galleries/';
+//    $instance->workWithImages($xmlObj, $from, $to);   // перемещение скаченных файлов в соответствующие каталоги
 
 //    $instance->getPicUrl($xmlObj);     // save to txt-file image url from yaml-file
-
 //    $instance->showListCatalog($xmlObj);
 
     echo 'Added catalogs = ' . count($arCatalogs);
@@ -59,8 +57,6 @@ class ImportYmlFile {
     private static $_instance;
 
     const CATALOG_ID = '4';  // id инфоблока каталога (куда импортируем)
-//    const SITE_ID = SITE_ID; // магазин
-
     const PARTNER_PRODUCT_SELECTED_ID = '13'; // id свойства Товар партнера (PARTNER_PRODUCT)
 
     const PARENT_REPAIR_ID = 'repair';                  // значение доп. поля раздела Для ремонта (UF_YAML_ID)
@@ -68,33 +64,34 @@ class ImportYmlFile {
     const PARENT_DACHA_ID = 'tovary-dlya-doma-i-dachi'; // значение доп. поля раздела Дом и дача (UF_YAML_ID)
 
     public $relationArray = [      // yml_id раздела (что добавлять) => bx_id раздела (куда добавлять)
-        '141' => self::PARENT_DACHA_ID,      // Садовая техника
-        '270' => self::PARENT_DACHA_ID,      // Оборудование
-        '139' => self::PARENT_DACHA_ID,      // Для отдыха
-        // '1677' => self::PARENT_FURNITURE_ID,  // Мебель   ( Для жилых комнат )
-        // '344'  => self::PARENT_FURNITURE_ID,  // Интерьер
-        // '1607' => self::PARENT_FURNITURE_ID,  // Для ванной
-        // '1937' => self::PARENT_FURNITURE_ID,  // Мебель для прихожей
-        // '2017' => self::PARENT_FURNITURE_ID,  // Мебель для спальни
-        // '2047' => self::PARENT_FURNITURE_ID,  // Мягкая мебель
-        // '285'  => self::PARENT_FURNITURE_ID,  // Детская мебель
-        // '346'  => self::PARENT_REPAIR_ID,     // Сантехника (И все подкатегории)
-        // '1747' => self::PARENT_REPAIR_ID,     // Двери и конструкции для дома (И все подкатегории)
-        // '905'  => self::PARENT_REPAIR_ID,     // Отделочные материалы (И все подкатегории)
-        // '544'  => self::PARENT_REPAIR_ID,     // Электроинструмент (И все подкатегории)
-        // '633'  => self::PARENT_REPAIR_ID,     // Профессиональный инструмент (И все подкатегории)
-        // '138'  => self::PARENT_REPAIR_ID,     // Ручной инструмент, оборудование (И все подкатегории)
-        // '1807' => self::PARENT_REPAIR_ID,     // Отопление, водоснабжение, вентиляция (И все подкатегории)
-        // '1767' => self::PARENT_REPAIR_ID,     // Строительное оборудование (И все подкатегории)
+        '141'  => self::PARENT_DACHA_ID,      // Садовая техника
+        '270'  => self::PARENT_DACHA_ID,      // Оборудование
+        '139'  => self::PARENT_DACHA_ID,      // Для отдыха
+        '1677' => self::PARENT_FURNITURE_ID,  // Мебель   ( Для жилых комнат )
+        '344'  => self::PARENT_FURNITURE_ID,  // Интерьер
+        '1607' => self::PARENT_FURNITURE_ID,  // Для ванной
+        '1937' => self::PARENT_FURNITURE_ID,  // Мебель для прихожей
+        '2017' => self::PARENT_FURNITURE_ID,  // Мебель для спальни
+        '2047' => self::PARENT_FURNITURE_ID,  // Мягкая мебель
+        '285'  => self::PARENT_FURNITURE_ID,  // Детская мебель
+        '346'  => self::PARENT_REPAIR_ID,     // Сантехника (И все подкатегории)
+        '1747' => self::PARENT_REPAIR_ID,     // Двери и конструкции для дома (И все подкатегории)
+        '905'  => self::PARENT_REPAIR_ID,     // Отделочные материалы (И все подкатегории)
+        '544'  => self::PARENT_REPAIR_ID,     // Электроинструмент (И все подкатегории)
+        '633'  => self::PARENT_REPAIR_ID,     // Профессиональный инструмент (И все подкатегории)
+        '138'  => self::PARENT_REPAIR_ID,     // Ручной инструмент, оборудование (И все подкатегории)
+        '1807' => self::PARENT_REPAIR_ID,     // Отопление, водоснабжение, вентиляция (И все подкатегории)
+        '1767' => self::PARENT_REPAIR_ID,     // Строительное оборудование (И все подкатегории)
     ];
 
     public $updatePic = false;      // true   - обновлять или нет картинки
     public $bUpdateSearch = false;  // Индексировать элемент для поиска
 
     private $itemsCurrent = null;   // существующие yaml товары
-    private $file;
 
-    public $from = '/upload/21vek/';        // откуда брать картинки
+    private $file;
+    public $urlTxt = "/local/url-pic.txt";
+    // public $from = '/upload/21vek/';        // откуда брать картинки
     public $to = '/upload/img/galleries/';  // куда складывать картинки
 
     private function __construct() {
@@ -138,9 +135,7 @@ class ImportYmlFile {
     }
 
     public function importCatalogs($xmlObj) {
-
         $arParents = array_keys($this->relationArray);
-
 //        $arCategories = [];
         foreach ($xmlObj->shop->categories->category as $category) {
             if (in_array($category['id'], $arParents) && empty($category['parentId'])) {
@@ -184,7 +179,6 @@ class ImportYmlFile {
     }
 
     public function addSubCatalog($catalog) {
-
         $parentBxId = $this->getCatalogBxId($catalog['parentId']);  // (get parent BX id) get catalog id Мебель
         if ($parentBxId) {
             $arFields = Array(
@@ -241,7 +235,6 @@ class ImportYmlFile {
 
         $arFilter = ["IBLOCK_ID"   => self::CATALOG_ID,
                      'ACTIVE'      => 'Y',
-//                     'SITE_ID'     => self::SITE_ID,
                      "=UF_YAML_ID" => $uf_yaml_id,
                      'TYPE'        => 'catalog',
         ];
@@ -282,10 +275,10 @@ class ImportYmlFile {
                     $addedItemsCount++;
                 }
             }
-            if ($addedItemsCount > 99) break;
+//            if ($addedItemsCount > 99) break;
         }
 
-        if ($this->bUpdateSearch && $addedItemsCount > 0) {
+        if (!$this->bUpdateSearch && $addedItemsCount > 0) {
             CSearch::ReIndexModule('iblock');
         }
 
@@ -438,17 +431,17 @@ class ImportYmlFile {
         echo '<br>items: ' . $i;
     }
 
-    public function getYamlImg($xmlObj) {
+    public function getYamlImg($xmlObj, $arCategories) {
         $images = [];
-//        $tmp = [];
         foreach ($xmlObj->shop->offers->offer as $offer) {
-            $arImg = array_map([$this, 'modifyUrlPic'], (array)$offer->picture);
-            foreach ($arImg as $image) {
-                $data = explode("/", $image);
-                $fileName = $data[7];
-                $dir = $data[5] . '/' . $data[6];
-                $images[$fileName] = $dir;
-//                $tmp[] = $fileName;
+            if (in_array((int)$offer->categoryId, $arCategories)) {
+                $arImg = array_map([$this, 'modifyUrlPic'], (array)$offer->picture);
+                foreach ($arImg as $image) {
+                    $data = explode("/", $image);
+                    $fileName = $data[7];
+                    $dir = $data[5] . '/' . $data[6];
+                    $images[$fileName] = $dir;
+                }
             }
         }
 
@@ -458,18 +451,17 @@ class ImportYmlFile {
     }
 
     public function createDir($dir) {
-        mkdir($dir, 0777, true);
+        return mkdir($dir, 0777, true);
     }
 
     public function getPicUrl($xmlObj) {
-        $this->file = fopen($_SERVER['DOCUMENT_ROOT'] . "/tools/url-pic.txt", "w");
+        $this->file = fopen($_SERVER['DOCUMENT_ROOT'] . $this->urlTxt, "w");
         $pic = [];
         foreach ($xmlObj->shop->offers->offer as $offer) {
             $item = [
                 'id'      => (string)$offer['id'],
                 'picture' => array_map([$this, 'saveToFileUrlPic'], (array)$offer->picture),
             ];
-
             $pic[$item['id']] = $item['picture'];
         }
 
@@ -508,9 +500,15 @@ class ImportYmlFile {
 //            ?: rename($from . '/' . $fileName, $to . '/' . $fileName));
     }
 
-    public function workWithImages($xmlObj) {
-        $arYamlImg = $this->getYamlImg($xmlObj);   // get name & directory img-file from yaml-file
-        $from = $_SERVER['DOCUMENT_ROOT'] . $this->from;
+    public function workWithImages($xmlObj, $from) {
+
+        $arCategories = $this->getYmlCategories($xmlObj);
+
+        $arYamlImg = $this->getYamlImg($xmlObj, $arCategories);   // get name & directory img-file from yaml-file
+
+//        $from = $_SERVER['DOCUMENT_ROOT'] . $from;
+        // $from = realpath(dirname(__FILE__) . "/../../../../..") . "/domatv_image/";
+
         $arUploadImg = $this->getUploadImg($from);    // get upload files
         foreach ($arUploadImg as $img) {
             if (!$arYamlImg[$img]) {
@@ -563,5 +561,18 @@ class ImportYmlFile {
         }
 
         return $arItems;
+    }
+
+    public function getYmlCategories($xmlObj) {
+        $arParents = array_keys($this->relationArray);
+        foreach ($xmlObj->shop->categories->category as $category) {
+            if (in_array($category['parentId'], $arParents)) {
+                if (!in_array($category['id'], $arParents)) {
+                    $arParents[] = (int)$category['id'];
+                }
+            }
+        }
+
+        return $arParents;
     }
 }
