@@ -1,6 +1,6 @@
 <?php
-$_SERVER["DOCUMENT_ROOT"] = realpath(dirname(__FILE__) . "/../..");
-// $DOCUMENT_ROOT = $_SERVER["DOCUMENT_ROOT"];
+$_SERVER["DOCUMENT_ROOT"] = realpath(dirname(__FILE__) . "/../..");     // скрипт расположен : корень сайта/каталог/подкаталог/скрипт
+// $_SERVER["DOCUMENT_ROOT"] = realpath(dirname(__FILE__) . "/..");     // скрипт расположен : корень сайта/каталог/скрипт
 
 define("NO_KEEP_STATISTIC", true);
 define("NOT_CHECK_PERMISSIONS", true);
@@ -22,7 +22,6 @@ if (!CModule::IncludeModule("search")) {
 }
 
 $file = $_SERVER['DOCUMENT_ROOT'] . '/local/import-yml/yml/marketYandex.yml';  // импортируемый файл
-// $file = $_SERVER['DOCUMENT_ROOT'] . '/local/import-yml/yml/example.yml';  // импортируемый файл
 
 echo '<pre>';
 
@@ -55,43 +54,43 @@ echo '</pre>';
 class ImportYml {
     private static $_instance;
 
-    const CATALOG_ID = '4';  // id инфоблока каталога (куда импортируем)
-    const PARTNER_PRODUCT_SELECTED_ID = '13'; // id свойства Товар партнера (PARTNER_PRODUCT)
+    const CATALOG_ID = '4';                             // id инфоблока каталога (куда импортируем)
+    const PARTNER_PRODUCT_SELECTED_ID = '13';           // id свойства Товар партнера (PARTNER_PRODUCT)
 
     const PARENT_REPAIR_ID = 'repair';                  // значение доп. поля раздела Для ремонта (UF_YAML_ID)
     const PARENT_FURNITURE_ID = 'furniture';            // значение доп. поля раздела Мебель (UF_YAML_ID)
     const PARENT_DACHA_ID = 'tovary-dlya-doma-i-dachi'; // значение доп. поля раздела Дом и дача (UF_YAML_ID)
 
-    public $relationArray = [      // yml_id раздела (что добавлять) => bx_id раздела (куда добавлять)
-        '141' => self::PARENT_DACHA_ID,      // Садовая техника
-        '270' => self::PARENT_DACHA_ID,      // Оборудование
-        '139' => self::PARENT_DACHA_ID,      // Для отдыха
-//        '1677' => self::PARENT_FURNITURE_ID,  // Мебель   ( Для жилых комнат )
-//        '344'  => self::PARENT_FURNITURE_ID,  // Интерьер
-//        '1607' => self::PARENT_FURNITURE_ID,  // Для ванной
-//        '1937' => self::PARENT_FURNITURE_ID,  // Мебель для прихожей
-//        '2017' => self::PARENT_FURNITURE_ID,  // Мебель для спальни
-//        '2047' => self::PARENT_FURNITURE_ID,  // Мягкая мебель
-//        '285'  => self::PARENT_FURNITURE_ID,  // Детская мебель
-//        '346'  => self::PARENT_REPAIR_ID,     // Сантехника (И все подкатегории)
-//        '1747' => self::PARENT_REPAIR_ID,     // Двери и конструкции для дома (И все подкатегории)
-//        '905'  => self::PARENT_REPAIR_ID,     // Отделочные материалы (И все подкатегории)
-//        '544'  => self::PARENT_REPAIR_ID,     // Электроинструмент (И все подкатегории)
-//        '633'  => self::PARENT_REPAIR_ID,     // Профессиональный инструмент (И все подкатегории)
-//        '138'  => self::PARENT_REPAIR_ID,     // Ручной инструмент, оборудование (И все подкатегории)
-//        '1807' => self::PARENT_REPAIR_ID,     // Отопление, водоснабжение, вентиляция (И все подкатегории)
-//        '1767' => self::PARENT_REPAIR_ID,     // Строительное оборудование (И все подкатегории)
+    public $relationArray = [                // yml_id раздела (что добавлять) => bx_id раздела (куда добавлять)
+       '141'  => self::PARENT_DACHA_ID,      // Садовая техника
+       '270'  => self::PARENT_DACHA_ID,      // Оборудование
+       '139'  => self::PARENT_DACHA_ID,      // Для отдыха
+       '1677' => self::PARENT_FURNITURE_ID,  // Мебель   ( Для жилых комнат )
+       '344'  => self::PARENT_FURNITURE_ID,  // Интерьер
+       '1607' => self::PARENT_FURNITURE_ID,  // Для ванной
+       '1937' => self::PARENT_FURNITURE_ID,  // Мебель для прихожей
+       '2017' => self::PARENT_FURNITURE_ID,  // Мебель для спальни
+       '2047' => self::PARENT_FURNITURE_ID,  // Мягкая мебель
+       '285'  => self::PARENT_FURNITURE_ID,  // Детская мебель
+       '346'  => self::PARENT_REPAIR_ID,     // Сантехника (И все подкатегории)
+       '1747' => self::PARENT_REPAIR_ID,     // Двери и конструкции для дома (И все подкатегории)
+       '905'  => self::PARENT_REPAIR_ID,     // Отделочные материалы (И все подкатегории)
+       '544'  => self::PARENT_REPAIR_ID,     // Электроинструмент (И все подкатегории)
+       '633'  => self::PARENT_REPAIR_ID,     // Профессиональный инструмент (И все подкатегории)
+       '138'  => self::PARENT_REPAIR_ID,     // Ручной инструмент, оборудование (И все подкатегории)
+       '1807' => self::PARENT_REPAIR_ID,     // Отопление, водоснабжение, вентиляция (И все подкатегории)
+       '1767' => self::PARENT_REPAIR_ID,     // Строительное оборудование (И все подкатегории)
     ];
 
     public $updatePic = false;      // true   - обновлять или нет картинки
-    public $bUpdateSearch = false;  // Индексировать элемент для поиска
+    public $bUpdateSearch = true;   // Индексировать элемент для поиска
 
     private $itemsCurrent = null;   // существующие yaml товары
 
     private $file;
     public $urlTxt = "/local/url-pic.txt";
     // public $from = '/upload/21vek/';        // откуда брать картинки
-    public $to = '/upload/img/galleries/';  // куда складывать картинки
+    public $to = '/upload/img/galleries/';     // куда класть картинки
 
     private function __construct() {
         // get yaml items from BX
