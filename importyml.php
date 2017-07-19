@@ -62,29 +62,28 @@ class ImportYml {
     const PARENT_DACHA_ID = 'tovary-dlya-doma-i-dachi'; // значение доп. поля раздела Дом и дача (UF_YAML_ID)
 
     public $relationArray = [                // yml_id раздела (что добавлять) => bx_id раздела (куда добавлять)
-       '141'  => self::PARENT_DACHA_ID,      // Садовая техника
-       '270'  => self::PARENT_DACHA_ID,      // Оборудование
-       '139'  => self::PARENT_DACHA_ID,      // Для отдыха
-       '1677' => self::PARENT_FURNITURE_ID,  // Мебель   ( Для жилых комнат )
-       '344'  => self::PARENT_FURNITURE_ID,  // Интерьер
-       '1607' => self::PARENT_FURNITURE_ID,  // Для ванной
-       '1937' => self::PARENT_FURNITURE_ID,  // Мебель для прихожей
-       '2017' => self::PARENT_FURNITURE_ID,  // Мебель для спальни
-       '2047' => self::PARENT_FURNITURE_ID,  // Мягкая мебель
-       '285'  => self::PARENT_FURNITURE_ID,  // Детская мебель
-       '346'  => self::PARENT_REPAIR_ID,     // Сантехника (И все подкатегории)
-       '1747' => self::PARENT_REPAIR_ID,     // Двери и конструкции для дома (И все подкатегории)
-       '905'  => self::PARENT_REPAIR_ID,     // Отделочные материалы (И все подкатегории)
-       '544'  => self::PARENT_REPAIR_ID,     // Электроинструмент (И все подкатегории)
-       '633'  => self::PARENT_REPAIR_ID,     // Профессиональный инструмент (И все подкатегории)
-       '138'  => self::PARENT_REPAIR_ID,     // Ручной инструмент, оборудование (И все подкатегории)
-       '1807' => self::PARENT_REPAIR_ID,     // Отопление, водоснабжение, вентиляция (И все подкатегории)
-       '1767' => self::PARENT_REPAIR_ID,     // Строительное оборудование (И все подкатегории)
+       '141'  => self::PARENT_DACHA_ID,       // Садовая техника
+       '270'  => self::PARENT_DACHA_ID,       // Оборудование
+       '139'  => self::PARENT_DACHA_ID,       // Для отдыха
+       // '1677' => self::PARENT_FURNITURE_ID,  // Мебель   ( Для жилых комнат )
+       // '344'  => self::PARENT_FURNITURE_ID,  // Интерьер
+       // '1607' => self::PARENT_FURNITURE_ID,  // Для ванной
+       // '1937' => self::PARENT_FURNITURE_ID,  // Мебель для прихожей
+       // '2017' => self::PARENT_FURNITURE_ID,  // Мебель для спальни
+       // '2047' => self::PARENT_FURNITURE_ID,  // Мягкая мебель
+       // '285'  => self::PARENT_FURNITURE_ID,  // Детская мебель
+       // '346'  => self::PARENT_REPAIR_ID,     // Сантехника (И все подкатегории)
+       // '1747' => self::PARENT_REPAIR_ID,     // Двери и конструкции для дома (И все подкатегории)
+       // '905'  => self::PARENT_REPAIR_ID,     // Отделочные материалы (И все подкатегории)
+       // '544'  => self::PARENT_REPAIR_ID,     // Электроинструмент (И все подкатегории)
+       // '633'  => self::PARENT_REPAIR_ID,     // Профессиональный инструмент (И все подкатегории)
+       // '138'  => self::PARENT_REPAIR_ID,     // Ручной инструмент, оборудование (И все подкатегории)
+       // '1807' => self::PARENT_REPAIR_ID,     // Отопление, водоснабжение, вентиляция (И все подкатегории)
+       // '1767' => self::PARENT_REPAIR_ID,     // Строительное оборудование (И все подкатегории)
     ];
 
     public $updatePic = false;      // true   - обновлять или нет картинки
     public $bUpdateSearch = true;   // Индексировать элемент для поиска
-
     private $itemsCurrent = null;   // существующие yaml товары
 
     private $file;
@@ -184,7 +183,7 @@ class ImportYml {
         if ($parentBxId) {
             $arFields = Array(
                 "NAME"              => $catalog['name'],
-                "ACTIVE"            => 'Y',
+                "ACTIVE"            => 'N',
                 "IBLOCK_SECTION_ID" => $parentBxId,
                 "IBLOCK_ID"         => self::CATALOG_ID,
                 "UF_YAML_ID"        => $catalog['id'],
@@ -202,7 +201,7 @@ class ImportYml {
         if ($category['relatedParentId']) {
             $arFields = Array(
                 "NAME"              => $category['name'],
-                "ACTIVE"            => 'Y',
+                "ACTIVE"            => 'N',
                 "IBLOCK_SECTION_ID" => $category['relatedParentId'],
                 "IBLOCK_ID"         => self::CATALOG_ID,
                 "UF_YAML_ID"        => $category['id'],
@@ -222,6 +221,9 @@ class ImportYml {
         if (!$id) { // if not exist catalog - add
             $id = $bs->Add($arFields);
         } else {
+            if( !empty($arFields["ACTIVE"])  ) {
+                    unset( $arFields["ACTIVE"] );
+                }
             if ($bs->Update($id, $arFields)) {
 //            echo "Update: " . $id
             } else {
@@ -235,7 +237,7 @@ class ImportYml {
     public function getCatalogBxId($uf_yaml_id) {
 
         $arFilter = ["IBLOCK_ID"   => self::CATALOG_ID,
-                     'ACTIVE'      => 'Y',
+                     // 'ACTIVE'      => 'Y',
                      "=UF_YAML_ID" => $uf_yaml_id,
                      'TYPE'        => 'catalog',
         ];
